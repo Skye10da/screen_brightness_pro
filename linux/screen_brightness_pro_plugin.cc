@@ -91,5 +91,6 @@ void screen_brightness_pro_plugin_register_with_registrar(FlPluginRegistrar* reg
       fl_plugin_registrar_get_messenger(registrar), "screen_brightness_pro_events",
       FL_METHOD_CODEC(codec));
   // No-op stream handler for now to satisfy Dart side
-  fl_event_channel_set_stream_handler(event_channel, nullptr, nullptr, nullptr);
+  fl_event_channel_set_stream_handlers(event_channel, nullptr, nullptr, nullptr,
+                                       nullptr);
 }

@@ -12,9 +12,3 @@ target_compile_definitions(screen_brightness_pro PRIVATE FLUTTER_PLUGIN_IMPL)
 target_link_libraries(screen_brightness_pro flutter)
 target_link_libraries(screen_brightness_pro PkgConfig::GTK)
 target_link_libraries(screen_brightness_pro PkgConfig::GLIB)
-
-# Add D-Bus support
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(DBUS REQUIRED dbus-1)
-target_include_directories(screen_brightness_pro PRIVATE ${DBUS_INCLUDE_DIRS})
-target_link_libraries(screen_brightness_pro ${DBUS_LIBRARIES})
