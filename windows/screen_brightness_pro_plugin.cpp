@@ -2,7 +2,6 @@
 
 // This must be included before many other Windows headers.
 #include <Wbemcli.h>
-#include <comutil.h>
 #include <windows.h>
 
 #include <flutter/method_channel.h>
@@ -13,6 +12,29 @@
 #include <sstream>
 
 #pragma comment(lib, "wbemuuid.lib")
+namespace {
+class BstrHolder {
+ public:
+  explicit BstrHolder(const wchar_t *s) : bstr_(::SysAllocString(s ? s : L"")) {}
+  explicit BstrHolder(const char *s) : bstr_(nullptr) {
+    if (s) {
+      int wlen = ::MultiByteToWideChar(CP_ACP, 0, s, -1, nullptr, 0);
+      if (wlen > 0) {
+        bstr_ = ::SysAllocStringLen(nullptr, wlen - 1);
+        ::MultiByteToWideChar(CP_ACP, 0, s, -1, bstr_, wlen);
+      }
+    }
+  }
+  ~BstrHolder() { ::SysFreeString(bstr_); }
+  BstrHolder(const BstrHolder &) = delete;
+  BstrHolder &operator=(const BstrHolder &) = delete;
+  operator BSTR() const { return bstr_; }
+
+ private:
+  BSTR bstr_;
+};
+}  // namespace
+
 
 namespace screen_brightness_pro {
 
@@ -30,12 +52,6 @@ void ScreenBrightnessProPlugin::RegisterWithRegistrar(
       [plugin_pointer = plugin.get()](const auto &call, auto result) {
         plugin_pointer->HandleMethodCall(call, std::move(result));
       });
-
-  auto events =
-      std::make_unique<flutter::EventChannel<flutter::EncodableValue>>(
-          registrar->messenger(), "screen_brightness_pro_events",
-          &flutter::StandardMethodCodec::GetInstance());
-  events->SetStreamHandler(nullptr);
 
   registrar->AddPlugin(std::move(plugin));
 }
@@ -55,7 +71,7 @@ double GetWindowsBrightness() {
     return 0.5;
 
   IWbemServices *pSvc = NULL;
-  hr = pLoc->ConnectServer(_bstr_t(L"ROOT\\WMI"), NULL, NULL, 0, NULL, 0, 0,
+  hr = pLoc->ConnectServer(BstrHolder(L"ROOT\\WMI"), NULL, NULL, 0, NULL, 0, 0,
                            &pSvc);
   if (FAILED(hr)) {
     pLoc->Release();
@@ -63,8 +79,8 @@ double GetWindowsBrightness() {
   }
 
   IEnumWbemClassObject *pEnumerator = NULL;
-  hr = pSvc->ExecQuery(bstr_t("WQL"),
-                       bstr_t("SELECT * FROM WmiMonitorBrightness"),
+  hr = pSvc->ExecQuery(BstrHolder("WQL"),
+                       BstrHolder("SELECT * FROM WmiMonitorBrightness"),
                        WBEM_FLAG_FORWARD_ONLY | WBEM_FLAG_RETURN_IMMEDIATELY,
                        NULL, &pEnumerator);
 
@@ -102,7 +118,7 @@ void SetWindowsBrightness(double brightness) {
     return;
 
   IWbemServices *pSvc = NULL;
-  hr = pLoc->ConnectServer(_bstr_t(L"ROOT\\WMI"), NULL, NULL, 0, NULL, 0, 0,
+  hr = pLoc->ConnectServer(BstrHolder(L"ROOT\\WMI"), NULL, NULL, 0, NULL, 0, 0,
                            &pSvc);
   if (FAILED(hr)) {
     pLoc->Release();
@@ -110,8 +126,8 @@ void SetWindowsBrightness(double brightness) {
   }
 
   IEnumWbemClassObject *pEnumerator = NULL;
-  hr = pSvc->ExecQuery(bstr_t("WQL"),
-                       bstr_t("SELECT * FROM WmiMonitorBrightnessMethods"),
+  hr = pSvc->ExecQuery(BstrHolder("WQL"),
+                       BstrHolder("SELECT * FROM WmiMonitorBrightnessMethods"),
                        WBEM_FLAG_FORWARD_ONLY | WBEM_FLAG_RETURN_IMMEDIATELY,
                        NULL, &pEnumerator);
 
@@ -124,7 +140,7 @@ void SetWindowsBrightness(double brightness) {
       pclsObj->Get(L"__PATH", 0, &vtPath, NULL, NULL);
 
       IWbemClassObject *pInParamsDefinition = NULL;
-      hr = pSvc->GetObject(bstr_t("WmiMonitorBrightnessMethods"), 0, NULL,
+      hr = pSvc->GetObject(BstrHolder("WmiMonitorBrightnessMethods"), 0, NULL,
                            &pInParamsDefinition, NULL);
 
       IWbemClassObject *pClassInstance = NULL;
@@ -140,7 +156,7 @@ void SetWindowsBrightness(double brightness) {
       varTimeout.lVal = 0;
       pClassInstance->Put(L"Timeout", 0, &varTimeout, 0);
 
-      pSvc->ExecMethod(vtPath.bstrVal, bstr_t("WmiSetBrightness"), 0, NULL,
+      pSvc->ExecMethod(vtPath.bstrVal, BstrHolder("WmiSetBrightness"), 0, NULL,
                        pClassInstance, NULL, NULL);
 
       pClassInstance->Release();

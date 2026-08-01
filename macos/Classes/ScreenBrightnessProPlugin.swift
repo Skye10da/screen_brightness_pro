@@ -1,6 +1,8 @@
 import Cocoa
 import FlutterMacOS
 import IOKit
+import IOKit.pwr_mgt
+import IOKit.ps
 
 public class ScreenBrightnessProPlugin: NSObject, FlutterPlugin, FlutterStreamHandler {
   private var eventSink: FlutterEventSink?
